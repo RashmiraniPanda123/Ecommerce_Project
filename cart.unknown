@@ -1,0 +1,66 @@
+$name = $username = $password = "";
+$name_err = $username_err = $password_err = "";
+//processing form datra when form is submited
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    if (empty(trim($_POST["name"]))) {
+        $name_err = "please enter a name.";
+    }
+    //email
+    if (empty(trim($_POST["username"]))) {
+        $username_err = "please enter a email addresss.";
+    } elseif (!filter_var(trim($_POST["username"]), FILTER_VALIDATE_EMAIL)) {
+        $username_err = "please enter a valid email address.";
+    } else {
+        $sql = "SELECT id FROM users WHERE username = ?";
+        if ($stmt = mysqli_prepare($link, $sql)) {
+            mysqli_stmt_bind_param($stmt, "s", $param_username);
+
+            //Attempt to execute the prepare statement
+            if (mysqli_stmt_execute($stmt)) {
+                mysqli_stmt_store_result($stmt);
+                if (mysqli_stmt_num_rows($stmt) == 1) {
+                    $username_err = "This username is already taken.";
+                } else {
+                    $username = trim($_POST["username"]);
+                }
+            } else {
+                echo "OOPS! Somethhing went wrong. please try again later.";
+            }
+            // close statement
+            mysqli_stmt_close($stmt);
+        }
+    }
+    //password
+    if (empty(trim($_POST["password"]))) {
+        $password_err = "please enter a password";
+    } elseif (strlen(trim($_POST["password"]) < 8)) {
+        $password_err = "password must have at least 8 characters.";
+    } elseif (!preg_match("/^(?=. *[a-z])(?=. *[A-Z](?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}"))
+        $password_err = "password must contain at least one uppercase letter,one lowercase";
+
+    else {
+        $password = trim($_POST["password"]);
+    }
+    //check input errors before inaerting in database
+    if (empty($username_err) && empty($password_err)) {
+        //insert statement
+        $sql = "INSERT INTO users (username, password) VALUES(?,?)";
+        if ($start = mysqli_prepare($link, $sql)) {
+            mysqli_stmt_bind_param($stmt, "ss", $param_username, $param_password);
+
+            //set parameters
+            $param_username = $username;
+            $param_password = password_hash($password, PASSWORD_DEFAULT);
+
+            if (mysqli_stmt_execute($stmt)) {
+                header("location: login.php");
+            } else {
+                echo "Something went wrong. please try again later.";
+            }
+
+            //close statement
+            mysqli_stmt_close($stmt);
+        }
+    }
+    //close connection
+    mysqli_close($link);
